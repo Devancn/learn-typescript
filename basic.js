@@ -77,5 +77,95 @@ var myColor = [0 /* RED */, 1 /* YELLOW */, 2 /* BLUE */];
     // Symbol
     var s1 = Symbol('key');
     var s2 = Symbol('ke');
-    console.log(s1 === s2);
+    // console.log(s1 === s2)
+}
+{
+    // 类型推导
+    var uname = void 0;
+    uname = 1;
+    uname = 'devan';
+    var uname2 = 'huan';
+    uname2 = 2;
+}
+{
+    // 包装对象 wrapper object
+    // 原型类型 对象类型
+    var name_1 = 'devan';
+    // 内部自动包装成对象类型
+    console.log(name_1.toUpperCase());
+}
+{
+    // 联合类型
+    var name_2;
+    console.log(name_2.toString());
+    name_2 = 2;
+    console.log(name_2.toFixed(2));
+}
+{
+    // 类型断言
+    var name_3;
+    console.log(name_3.toFixed());
+    console.log(name_3.length);
+    // 双重断言
+    console.log(name_3);
+}
+{
+    // 字面量类型
+    var up = 'Up';
+    var down = 'down';
+    var right = 1;
+    // 可实现枚举的效果
+    function move(direction) { }
+    move('Down');
+}
+{
+    var p1 = {
+        name: 'devan',
+        age: 27
+    };
+}
+{
+    var t1 = '3';
+    var t2 = true;
+}
+{
+    function hello(name) {
+        console.log('hello', name);
+    }
+    hello('zhufeng');
+    var getName = function (firstName, lastName) {
+        return firstName + lastName;
+    };
+}
+{
+    function print(name, age) {
+        console.log(name, age);
+    }
+    print('devan', 27);
+    function sum() {
+        var numbers = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            numbers[_i] = arguments[_i];
+        }
+        return numbers.reduce(function (val, item) { return val + item; }, 0);
+    }
+    console.log(sum(1, 2, 3));
+}
+{
+    // 函数的重载
+    var obj_1 = {};
+    function attr(val) {
+        if (typeof val === 'string') {
+            obj_1.name = val;
+        }
+        else if (typeof val === 'number') {
+            obj_1.age = val;
+        }
+    }
+    attr('devan');
+    attr(27);
+    function add(a, b) {
+    }
+    add('a', 'b');
+    add(1, 1);
 }
