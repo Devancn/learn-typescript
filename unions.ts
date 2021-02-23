@@ -1,3 +1,5 @@
+// ts遇到 import 或者 export 会把当前文件识别为一个文件
+export { }
 /**
  * 交叉类型（Intersection Type）
  * 交叉类型是将多个类型合并为一个类型。可以把现有的多种类型叠加到一起成为一种类型，包含了所有类型的特性，如：
@@ -202,4 +204,222 @@
     }
     throw new Error(`Expected string of number, got '${padding}'.`)
   }
+}
+{
+  /**
+   * instanceof 类型保护
+   * instanceof 类型保护是通过构造函数来细化类型的一种方式。比如，借鉴之前字符填充的例子
+   */
+
+  interface Padder {
+    getPaddingString(): string;
+  }
+
+  class SpaceRepeatingPadder implements Padder {
+    constructor(private numSpaces: number) { }
+    getPaddingString() {
+      return Array(this.numSpaces + 1).join(" ");
+    }
+  }
+
+  class StringPadder implements Padder {
+    constructor(private value: string) { }
+    getPaddingString() {
+      return this.value;
+    }
+  }
+
+  function getRandomPadder() {
+    return Math.random() < 0.5 ?
+      new SpaceRepeatingPadder(4) :
+      new StringPadder(" ")
+  }
+
+  // 类型为 SpaceRepeatingPadder | StringPadder
+  let padder: Padder = getRandomPadder();
+  if (padder instanceof SpaceRepeatingPadder) {
+    padder; // 类型细化为 'SpaceRepeatingPadder'
+  }
+  if (padder instanceof StringPadder) {
+    padder; // 类型细化为 'StringPadder'
+  }
+  /**
+   *  instanceof 的右侧要求是一个构造函数， TypeScript将细化为：
+   * 1. 此构造函数的 prototype 属性的类型，如果它的类型不为 any的话
+   * 2. 构造签名所返回的类型的联合 
+   */
+}
+
+{
+  /**
+   * 可以为null的类型
+   * TypeScript具有两种特殊的类型， null 和 undefined，他们分别有
+   * 值 null 和 undefined，默认情况下，类型检查器 认为 null 和 undefined
+   * 可以赋值给任何类型。 null 与 undefined 是所有其它类型的一个有效值。
+   * 
+   * 可以在配置文件中 tsconfig.json compilerOptions.strictNullChecks 配置为 true， 当
+   * 声明一个变量时，不会自动地包含 null 和 undefined。
+   */
+
+  let s = "foo";
+  //  错误示范， 'null'不能赋值给'string'
+  s = null;
+  //  可以使用联合类型明确包含 null，则可以赋值
+  let sn: string | null = "bar";
+  sn = null
+  //  不能把 undefined 赋值给 联合类型 'string | null'
+  sn = undefined
+  /**
+   * 按照 JavaScript 的语义， TypeScript 会把 null 和 undefined 区别对待。
+   * string | null, string | undefined 和 string | undefined | null 是不同的类型
+   */
+}
+
+
+{
+  /**
+   * 可选参数和可选属性
+   * 如果在配置文件中配置了 strictNullChecks ，则函数的可选参数会被自动地加上 | undefined:
+   */
+  function f(x: number, y?: number) {
+    // 这里的可选参数y 的类型 number 会和 undefined 成联合类型，默认不传递实参时，y的值是 undefined
+    return x + (y || 0)
+  }
+  f(1, 2);
+  f(1);
+  f(1, undefined);
+  f(1, null)
+
+}
+
+{
+  /**
+   * 可选属性也会有同样的处理：
+   */
+
+  class C {
+    a: number;
+    b?: number
+  }
+
+  let c = new C();
+  c.a = 123;
+  // undefined 不能赋值给 number类型的属性
+  c.a = undefined
+  c.b = 13;
+  // 因为 b是可选的属性，可以理解成 它的类型和 undefined 成 联合类型，所以可以给b赋 undefined属性
+  c.b = undefined // ok
+  // 值 null 不能 赋值给联合类型 'number | undefined'
+  c.b = null
+
+  /**
+   * 类型保护和类型断言
+   * 由于可以为 null 的类型是通过联合类型实现，那么需要使用类型保护 去除 null, 这与 JavaScript 里写的代码一致
+   */
+
+}
+{
+  // 可以使用短路运算符去除 null
+  function f1(sn: string | null): string {
+    return sn || 'default'
+  }
+
+}
+
+{
+  /**
+ * 如果编译器不能够去除 null 或 undefined， 可以使用类型断言手动去除。语法是添加！后缀：
+ * identifier! 从标识符 identifier的类型里祛除了 null 和 undefined:
+ */
+
+  function broken(name: string | null): string {
+    function postfix(epithet: string) {
+      // 这里会提示name有可能是 null 的错误
+      return name.charAt(0) + '. the' + epithet;
+    }
+    name = name || "Bob";
+    return postfix("great");
+  }
+
+  function fixed(name: string | null): string {
+    function postfix(epithet: string) {
+      // 这里可以在标识符 name后加 !，从标识符 name的类型里去除了 null
+      return name!.charAt(0) + '. the ' + epithet
+    }
+    name = name || "Bob";
+    return postfix("great");
+  }
+}
+
+{
+  /**
+   * 类型别名
+   * 类型别名会给一个类型起个新的名字。类型别名有时和接口很像，
+   * 但是可以作用于原始值，联合类型，元祖以及其它任何需要手动写的类型
+   */
+  type Name = string;
+  type NameResolver = () => string;
+  type NameOrResolver = Name | NameResolver;
+  function getName(n: NameOrResolver): Name {
+    if (typeof n === 'string') {
+      return n;
+    } else {
+      return n();
+    }
+  }
+
+  /**
+   * 小结：
+   * 起别名不会新建一个类型 - 它创建了一个新 名字来引用那个类型。给原始类型起别名通常没什么用，
+   * 尽管可以做为文档的一种形式使用。
+   * 同接口一样，类型别名也可以是泛型 - 可以添加类型参数并且别名声明的右侧传入
+   */
+
+  type Container<T> = { value: T };
+  // 也可以使用类型别名来在属性里引用自己：
+  type Tree<T> = {
+    value: T;
+    left: Tree<T>;
+    right: Tree<T>;
+  }
+  // 可以与交叉类型一起使用
+  type LinkedList<T> = T & { next: LinkedList<T> };
+  interface Person {
+    name: string
+  }
+
+  let people: LinkedList<Person>;
+
+  var s1 = people.name;
+  var s1 = people.next.name;
+  var s1 = people.next.next.name;
+  var s1 = people.next.next.next.next.name;
+
+  // 类型别名不能出现声明右侧的任何地方
+}
+
+{
+  /**
+   * 接口 vs 类型别名
+   * 类型别名可以像接口一样，但有一些细微差别
+   * 
+   */
+}
+{
+  /**
+  * 区别一： 接口创建了一个新的名字， 可以在其它任何地方使用。类型别名并不创建新名字 - 比如，错误信息就不会使用别名
+  */
+
+  type Alias = { num: number };
+  interface Interface {
+    num: number;
+  }
+
+  declare function aliased(arg: Alias): Alias;
+  declare function interfaced(arg: Interface): Interface
+
+  /**
+   * 还有一个重要区别的类型别名是不能被 extends 和 implements（自己也不能 extends 和 implements 其它类型）
+   * 因为 软件中的对象应该对于扩展是开放的， 但是对于修改是封闭的。 应该尽量使用接口代替类型别名
+   */
 }
