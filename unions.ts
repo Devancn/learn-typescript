@@ -423,3 +423,289 @@ export { }
    * 因为 软件中的对象应该对于扩展是开放的， 但是对于修改是封闭的。 应该尽量使用接口代替类型别名
    */
 }
+{
+  /**
+   * 可辨识联合
+   * 可以合并单例类型，联合类型，类型保护和类型别名来创建一个叫做
+   * 可识别联合的高级模式，它也称做 标签联合 或 代数数据类型。可辨识联合在函数式编程很有用处，具有三个要素：
+   * 1. 具有普通的单例类型属性- 可识别的特征。
+   * 2. 一个类型别名包含了那些类型的联合- 联合
+   * 3. 此属性上的类型保护
+   */
+  //  首先声明将要联合的接口，每个接口都有 kind 属性但有不同的字符串字面量类型。 kind 属性称做 可辨识的特征 或 标签。其它
+  // 的属性则特定于各个接口。目前各个接口间是没有联系的，
+  interface Square {
+    kind: "square";
+    size: number
+  }
+
+  interface Rectangle {
+    kind: "rectangle";
+    width: number;
+    height: number
+  }
+
+  interface Circle {
+    kind: "circle";
+    radius: number
+  }
+
+  type Shape = Square | Rectangle | Circle;
+  // 使用可辨识联合
+  function area(s: Shape) {
+    switch (s.kind) {
+      case "square": return s.size * s.size;
+      case "rectangle": return s.height * s.width;
+      case "circle": return Math.PI * s.radius ** 2;
+    }
+  }
+}
+{
+  /**
+   * 完整性检查
+   * 当没有涵盖所有可辨识联合的变化时，想让编译器通知我们，有两种方式
+   * 实现
+   * 1. 配置文件中打开 strictNullChecks 并指定一个返回值类型
+   */
+  // function area(s: Shape): number 
+
+  // 第二种方法使用 never 类型，编译器进行完整性检查
+  function assertNever(x: never): never {
+    throw new Error("Unexpected object:" + x)
+  }
+
+}
+
+{
+  /**
+   * 多态的 this 类型
+   * 多态 this 类型表示的是某个包含类或接口的 子类型。
+   * 这被称做 f-bounded多态性。它能很容易的表现连贯接口的继承
+   */
+  class BasicCalculator {
+    public constructor(protected value: number = 0) { }
+    public currentValue(): number {
+      return this.value;
+    }
+    public add(operand: number): this {
+      this.value += operand;
+      return this;
+    }
+    public multiply(operand: number): this {
+      this.value *= operand;
+      return this;
+    }
+  }
+  /**
+   * 由于这个类使用了 this 类型，你可以继承它，新的类可以直接使用之前的方法，不需要做任何的改变
+   */
+  class ScientificCalculator extends BasicCalculator {
+    public constructor(value = 0) {
+      super(value)
+    }
+    public sin() {
+      this.value = Math.sin(this.value);
+      return this;
+    }
+  }
+
+  /**
+   * 如果没有 this 类型， ScientificCalculator 就不能在继承 BasicCalculator 的同时还保持接口的连贯性。
+   * multiply 将返回 BasicCalculator，它并没有sin 方法。然后， 使用 this 类型，multiply会返回this,
+   * 在这里就是 ScientificCalculator
+   */
+  let v = new ScientificCalculator(2)
+    .multiply(5)
+    .sin()
+    .add(1)
+    .currentValue();
+}
+
+{
+  /**
+   * 索引类型
+   * 使用索引类型，编译器就能够检查使用了动态属性名的代码。例如，一个常见的 JavaScript 模式是从对象中选取属性的子集。
+   * 下面是如何在 TypeScript里使用此函数，通过 索引类型查询 和 索引访问 操作符
+   */
+
+  function pluck<T, K extends keyof T>(o: T, names: K[]): T[K][] {
+    return names.map(n => o[n])
+  }
+
+  interface Person {
+    name: string;
+    age: number;
+  }
+
+  let person: Person = {
+    name: 'Jarid',
+    age: 35
+  }
+
+  /**
+   * 编译器会检查 name 是否真的是 Person 的一个属性。本例还引入了几个新的类型操作符。首先是 keyof T，索引类型查询
+   * 操作符。对于任何类型 T，keyof T 的结果为 T 上已知的公共属性名的联合
+   */
+  let strings: string[] = pluck(person, ['name'])
+}
+
+{
+  /**
+   * keyof Person 是完全可以与 'name' | 'age' 互相替换的。不同的是如果添加了其它的属性 到 Person，例如 address: string，
+   * 那么 keyof Person 会自动变为 'name' | 'age' | 'address'。
+   */
+  let personProps: keyof Person; // 'name' | 'age'
+
+  /**
+   * 第二个操作符是 T[K]，索引访问操作符。在这里，类型语法反映了表达式语法。这意味着 person['name']具有类型 Person['name']
+   * - 在例子里则为 string 类型。 然而，就像索引类型查询一样，可以在普通的上下文里使用 T[K]，这正是它的强大所在。主要确保类型
+   * 变量 K extends keyof T就可以了，例如下面 getProperty函数的例子：
+   */
+  function getProperty<T, K extends keyof T>(o: T, name: K): T[K] {
+    // o[name] is of type T[K]
+    return o[name]
+  }
+}
+
+{
+  /**
+   * 索引类型和字符串索引签名
+   * keyof 和 T[K] 与字符串索引签名进行交互。如果一个带有字符串索引签名的类型。那么 keyof T 会是 string。并且 T[string]为索引签名的类型
+   */
+  interface Map<T> {
+    [key: string]: T;
+  }
+  let keys: keyof Map<number>; //string
+  let value: Map<number>['foo']; // number
+}
+{
+  /**
+   * 映射类型
+   * 一个常见的任务是将一个已知的类型每个属性都变为可选的：
+   */
+  interface PersonPartial {
+    name?: string;
+    age?: number
+  }
+}
+{
+  /**
+   * 在 JavaScript里经常出现，TypeScript提供了从旧类型中创建新类型的一种方式- 映射类型。在映射类型里，新类型
+   * 以相同的形式去转换旧类型里每个属性。例如，你可以令每个属性成为 readonly 类型或可选的。
+   */
+  type Readonly<T> = {
+    readonly [P in keyof T]: T[P];
+  }
+  type Partial<T> = {
+    [P in keyof T]?: T[P];
+  }
+  // 使用
+  type PersonPartial = Partial<Person>;
+  type ReadonlyPerson = Readonly<Person>;
+
+  /**
+   * 最简单的映射类型和它的组成部分
+   * 它的语法与索引签名的语法类型，内部使用了 for .. in。具有三个部分：
+   * 1. 类型变量K，它会一次绑定到每个属性
+   * 2. 字符串字面量联合的 keys，它包含了要迭代的属性名的几何。
+   * 3. 属性的结果类型
+   */
+  type Keys = 'option1', 'option2';
+  type Flags = { [K in Keys]: boolean }
+  // 在这个简单的例子里， keys是硬编码的属性名列表并且属性类型永远是 boolean，因此这个映射类型等同于：
+  type Flags = {
+    option1: boolean;
+    option2: boolean
+  }
+}
+{
+  /**
+   * keyof 和 索引访问类型要做的事情会基于一些已存在的类型，且按照一定得方法转换字段。
+   */
+  type NullablePerson = { [P in keyof Person]: PermissionState[P] | null }
+  type PartialPerson = { [P in keyof Person]?: Person[p] }
+}
+
+{
+  /**
+   * 在这些例子里，
+   * 属性列表 keyof T 且结果是 T[P] 的变体。这是使用通用映射类型的一个好模板。因为这类转换是 同态 的，映射只作用域 T 的
+   * 属性而没有其它的。 编译器知道在添加任何新属性之前可以拷贝所有存在的属性修饰符。 例如 Person.name 是只读的，那么 Partial<Person>.name 也将是只读的且为可选的
+   */
+  type Nullable<T> = { [P in keyof T]: T[P] | null };
+  type Partial<T> = { [P in keyof T]?: T[P] }
+}
+{
+  /**
+   * 这个例子里， T[P] 被包装在 Proxy<T> 类里：
+   */
+  type Proxy<T> = {
+    get(): T;
+    set(value: T): void
+  }
+
+  type Proxify<T> = {
+    [P in keyof T]: Proxy<T[P]>
+  }
+
+  function proxify<T>(o: T): Proxify<T> { }
+  let proxyProps = proxify(props)
+}
+
+{
+  /**
+   * Readonly，Partial 和 Pick 是同态的， 但 Record 不是。因为 Record 并不需要输入类型来拷贝属性，所以它不属于同态
+   */
+  type ThreeStringProps = Record<'prop1' | 'prop2' | 'prop3', string>
+}
+
+{
+  /**
+   * 由映射类型进行推断
+   * 现在你了解了如何包装一个类型的属性，那么接下来就是如何拆包。其实也很容易：
+   */
+  function unproxify<T>(t: Proxify<T>): T {
+    let result = {} as T;
+    for (const k in t) {
+      result[k] = t[k].get();
+    }
+    return result;
+  }
+}
+
+{
+  /**
+   * 预定义的条件类型
+   * - Exclude<T,U> --从 T 中剔除可以赋值给 U 的类型。
+   * - Extract<T,U> -- 提取 T 中可以赋值给 U 的类型。
+   * - NonNullable<T> -- 从 T 中剔除 null 和 undefined。
+   * - ReturnType<T> -- 获取函数返回值类型
+   * - InstanceType<T> -- 获取构造函数类型的实例类型
+   */
+
+  type T00 = Exclude<"a" | "b" | "c" | "d", "a" | "c" | "f">; // "b" | "d"
+  type T01 = Extract<"a" | "b" | "c" | "d", "a" | "c" | "f"> // "a" | "c"
+  type T02 = Exclude<string | number | (() => void), Function>; // string | number
+  type T03 = Extract<string | number | (() => void), Function>; // () => void
+  type T04 = NonNullable<string | number | undefined>; // string | number
+  type T05 = NonNullable<(() => string) | string[] | null | undefined>; // (() => string) | string[]
+
+  function f1(s: string) {
+    return { a: 1, b: s }
+  }
+
+  class C {
+    x = 0;
+    y = 0;
+  }
+
+  type T10 = ReturnType<() => string>; // string
+  type T11 = ReturnType<(s: string) => void>; // void
+  type T12 = ReturnType<(<T>() => T)>; // {}
+  type T13 = ReturnType<(<T extends U, U extends number[]>() => T)>; // number[]
+  type T14 = ReturnType<typeof f1>; // {a: number, b: string}
+  type T15 = ReturnType<any>; // any
+  type T16 = ReturnType<never>; // any
+  type T17 = ReturnType<string>; // Error
+  type T18 = ReturnType<Function>; // Error
+}
